@@ -1,50 +1,60 @@
-import type { ChangeEvent } from "react";
+import { ChangeEvent } from "react";
 import Tesseract from "tesseract.js";
+import { convertPdfToImages } from "./pdfToImage";
+import { runMultiPageOCR } from "./ocrMultiPage";
 
-interface ImageUploaderProps {
+interface Props {
   setText: (text: string) => void;
   setLoading: (loading: boolean) => void;
+  setProgress: (progress: number) => void;
   setImagePreview: (url: string | null) => void;
 }
 
-const ImageUploader: React.FC<ImageUploaderProps> = ({
+const ImageUploader: React.FC<Props> = ({
   setText,
   setLoading,
+  setProgress,
   setImagePreview,
 }) => {
-  const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Show preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-
     setLoading(true);
+    setProgress(0);
+    setText("");
 
-    Tesseract.recognize(file, "ben+eng", {
-      logger: (m) => console.log(m),
-    })
-      .then(({ data: { text } }) => {
-        setText(text);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    try {
+      let images: Blob[];
+
+      if (file.type === "application/pdf") {
+        images = await convertPdfToImages(file);
+        setImagePreview(URL.createObjectURL(images[0]));
+      } else {
+        images = [file];
+        setImagePreview(URL.createObjectURL(file));
+      }
+
+      const text = await runMultiPageOCR(images, ({ percent }) =>
+        setProgress(percent)
+      );
+
+      setText(text);
+    } catch (err) {
+      console.error(err);
+      alert("OCR failed. Check console for details.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="mb-3 w-100">
-      <input
-        type="file"
-        className="form-control"
-        accept="image/*"
-        onChange={handleImageUpload}
-      />
-    </div>
+    <input
+      type="file"
+      accept=".jpg,.jpeg,.png,.pdf"
+      className="form-control"
+      onChange={handleUpload}
+    />
   );
 };
 

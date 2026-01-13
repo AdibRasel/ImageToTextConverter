@@ -1,31 +1,26 @@
-interface TextOutputProps {
+interface Props {
   text: string;
   loading: boolean;
+  progress: number;
 }
 
-const TextOutput: React.FC<TextOutputProps> = ({ text, loading }) => {
+const TextOutput: React.FC<Props> = ({ text, loading, progress }) => {
+  if (!loading && !text) return null;
+
   return (
-    <div className="mt-3">
-      {loading ? (
-        <div className="d-flex flex-column align-items-center justify-content-center" style={{ minHeight: "300px" }}>
-          <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Loading...</span>
+    <div className="card p-4 shadow-sm">
+      {loading && (
+        <>
+          <div className="mb-2 fw-semibold">Processing... {progress}%</div>
+          <div className="progress mb-3">
+            <div
+              className="progress-bar progress-bar-striped progress-bar-animated"
+              style={{ width: `${progress}%` }}
+            />
           </div>
-          <p className="mt-2 mb-0">Processing image...</p>
-        </div>
-      ) : (
-        <div
-          className="card shadow-sm p-3"
-          style={{
-            minHeight: "300px",
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-word",
-            overflowY: "auto",
-          }}
-        >
-          <p className="mb-0">{text}</p>
-        </div>
+        </>
       )}
+      {!loading && <pre style={{ whiteSpace: "pre-wrap" }}>{text}</pre>}
     </div>
   );
 };
